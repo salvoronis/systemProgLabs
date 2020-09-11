@@ -1,7 +1,8 @@
 section .data
     newLine: db 0xA
+
+section .bss
     container: db ?
-    help: db "h",0
     number: db ?
 
 section .text
@@ -52,6 +53,7 @@ print_newline:
 ; Совет: выделите место в стеке и храните там результаты деления
 ; Не забудьте перевести цифры в их ASCII коды.
 print_uint:
+    push rbx
     xor rax, rax
     mov rax, rdi
     mov rbx, 10
@@ -73,6 +75,7 @@ print_uint:
         jne .strbuild
     mov rdi, number
     call print_string
+    pop rbx
     ret
 
 ; Выводит знаковое 8-байтовое число в десятичном формате 
@@ -148,13 +151,14 @@ read_word:
     xor rdi, rdi
     mov rdx, 1
     .next:
-    inc r10
+        inc r10
         xor rax, rax
         mov rsi, r9
         syscall
-    cmp r10, r8
-    je .end
-        cmp byte [r9], 0xca
+        .stop:
+        cmp r10, r8
+        je .end
+        cmp rax, 0
         je .end
         cmp byte [r9], 0x21
         jb .next
@@ -168,7 +172,7 @@ read_word:
         syscall
         cmp byte [r9], 0x21
         jb .end
-        cmp byte [r9], 0xca
+        cmp rax, 0
         je .end
         jmp .again
     .end:
