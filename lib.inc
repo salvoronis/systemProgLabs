@@ -10,19 +10,20 @@ section .text
  
 ; Принимает код возврата и завершает текущий процесс
 exit: 
-    xor rax, rax,
-    ret 
+    mov rbx, rax
+    mov rax, 60
+    syscall
 
 ; Принимает указатель на нуль-терминированную строку, возвращает её длину
 string_length:
     xor rax, rax
-.counter:
-    cmp byte [rdi+rax], 0
-    je .end
-    inc rax
-    jmp .counter
-.end:
-    ret
+    .counter:
+        cmp byte [rdi+rax], 0
+        je .end
+        inc rax
+        jmp .counter
+    .end:
+        ret
 
 ; Принимает указатель на нуль-терминированную строку, выводит её в stdout
 print_string:
@@ -130,10 +131,10 @@ read_char:
     je .return
     xor rax, rax
     mov al, [rsp]
-.return:
-    pop rdx
-    pop rdi
-    ret 
+    .return:
+        pop rdx
+        pop rdi
+        ret 
 
 ; Принимает: адрес начала буфера, размер буфера
 ; Читает в буфер слово из stdin, пропуская пробельные символы в начале, .
@@ -248,23 +249,23 @@ string_copy:
     call string_length
     push rax
     push rsi
-.loop:
-    cmp rcx, rdx
-    je .error
-    mov r8, [rdi+rcx]
-    mov [rsi+rcx], r8
-    cmp rax, 0
-    je .end
-    dec rax
-    inc rcx
-    jmp .loop
-.end
-    pop rsi
-    pop rax
-    mov byte [rsi+rax], 0
-    ret
-.error:
-    pop rsi
-    pop rax
-    mov rax, 0
-    ret
+    .loop:
+        cmp rcx, rdx
+        je .error
+        mov r8, [rdi+rcx]
+        mov [rsi+rcx], r8
+        cmp rax, 0
+        je .end
+        dec rax
+        inc rcx
+        jmp .loop
+    .end
+        pop rsi
+        pop rax
+        mov byte [rsi+rax], 0
+        ret
+    .error:
+        pop rsi
+        pop rax
+        mov rax, 0
+        ret
