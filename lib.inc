@@ -1,10 +1,3 @@
-section .data
-    newLine: db 0xA
-
-section .bss
-    container: db ?
-    number: db ?
-
 section .text
  
  
@@ -27,7 +20,6 @@ string_length:
 
 ; Принимает указатель на нуль-терминированную строку, выводит её в stdout
 print_string:
-    xor rax, rax
     call string_length
     mov rdx, rax
     mov rax, 1
@@ -36,52 +28,20 @@ print_string:
     syscall
     ret
 
-; Принимает код символа и выводит его в stdout
-print_char:
-    mov [container], rdi
-    mov rdi, container
-    call print_string
-    ret
-
 ; Переводит строку (выводит символ с кодом 0xA)
 print_newline:
-    xor rax, rax
     mov rdi, 10
-    call print_char
-    ret
 
-; Выводит беззнаковое 8-байтовое число в десятичном формате 
-; Совет: выделите место в стеке и храните там результаты деления
-; Не забудьте перевести цифры в их ASCII коды.
-print_uint:
-    push rbx
-    xor rax, rax
-    mov rax, rdi
-    mov rbx, 10
-    xor r8, r8
-    .loop:
-        xor rdx,rdx
-        div rbx
-        add rdx, '0'
-        push rdx
-        inc r8
-        cmp rax, 0
-        jg .loop
-    xor rax, rax
-    .strbuild:
-        pop rdx
-        mov [number + rax], rdx
-        inc rax
-        cmp rax,r8
-        jne .strbuild
-    mov rdi, number
+; Принимает код символа и выводит его в stdout
+print_char:
+    push rdi
+    mov rdi,rsp
     call print_string
-    pop rbx
+    pop rdi
     ret
 
 ; Выводит знаковое 8-байтовое число в десятичном формате 
 print_int:
-    xor rax, rax
     mov rax, rdi
     test rax, rax
     jns .printdig
@@ -92,14 +52,38 @@ print_int:
     neg rax
     mov rdi, rax
     .printdig:
-    call print_uint
+
+
+; Выводит беззнаковое 8-байтовое число в десятичном формате 
+; Совет: выделите место в стеке и храните там результаты деления
+; Не забудьте перевести цифры в их ASCII коды.
+print_uint:
+    push rbx
+    mov rax, rdi
+    mov rbx, 10
+    xor r8, r8
+    push 0
+    .loop:
+        xor rdx,rdx
+        div rbx
+        add rdx, '0'
+        push rdx
+        inc r8
+        cmp rax, 0
+        jg .loop
+    xor rax, rax
+    .strbuild:
+        pop rdi
+        cmp rdi, 0
+        je .end
+        call print_char
+        jmp .strbuild
+    .end:
+    pop rbx
     ret
 
 ; Принимает два указателя на нуль-терминированные строки, возвращает 1 если они равны, 0 иначе
 string_equals:
-    xor rax, rax
-    xor r8, r8
-    xor r9, r9
     .loop:
         mov r8b, byte [rdi]
         mov r9b, byte [rsi]
@@ -198,9 +182,8 @@ read_word:
 ; rdx = 0 если число прочитать не удалось
 parse_uint:
     xor rax, rax
-    xor rdx, rdx
-    xor rsi, rsi
     xor r9, r9
+    xor rsi, rsi
     mov r8, 10
     .loop:
         mov sil, [rdi+r9]
@@ -226,7 +209,6 @@ parse_uint:
 ; Возвращает в rax: число, rdx : его длину в символах (включая знак, если он был) 
 ; rdx = 0 если число прочитать не удалось
 parse_int:
-    xor rax, rax
     cmp byte [rdi], '-'
     je .minus
     call parse_uint
@@ -243,14 +225,22 @@ parse_int:
 ; Копирует строку в буфер
 ; Возвращает длину строки если она умещается в буфер, иначе 0
 string_copy:
-    xor rax, rax
-    xor r9, r9
     xor rcx, rcx
     call string_length
     push rax
     push rsi
     .loop:
         cmp rcx, rdx
+        je .error
+        mov r10, rsi
+        add r10, rcx
+        mov r9, r10
+        cmp r9, rdi
+        je .error
+        mov r10, rdi
+        add r10, rcx
+        mov r9, r10
+        cmp r9, rsi
         je .error
         mov r8, [rdi+rcx]
         mov [rsi+rcx], r8
